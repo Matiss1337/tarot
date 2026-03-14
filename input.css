@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@source "./index.html";
+
+@theme {
+  --color-page: #0f0f0f;
+  --color-surface: #171717;
+  --color-panel: #1d1d1d;
+  --color-border: #2f2f2f;
+  --color-text: #f5f5f5;
+  --color-muted: #b6b6b6;
+  --color-accent: #00d4aa;
+  --color-accent-soft: #12362f;
+  --color-paper: #efe6d6;
+  --color-ink: #1b1b1b;
+  --font-sans: "IBM Plex Sans", sans-serif;
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.12);
+}

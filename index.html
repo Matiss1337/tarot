@@ -10,864 +10,153 @@
       href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              page: "#0f0f0f",
-              surface: "#171717",
-              panel: "#1d1d1d",
-              border: "#2f2f2f",
-              text: "#f5f5f5",
-              muted: "#b6b6b6",
-              accent: "#00d4aa",
-              accentSoft: "#12362f",
-              cardBg: "#f4efe6",
-              cardInk: "#1b1b1b",
-            },
-            fontFamily: {
-              sans: ['"IBM Plex Sans"', "sans-serif"],
-            },
-            boxShadow: {
-              card: "0 2px 8px rgba(0, 0, 0, 0.12)",
-            },
-          },
-        },
-      };
-    </script>
+    <link rel="stylesheet" href="./output.css" />
+    <script defer src="./deck.js"></script>
+    <script defer src="./app.js"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
   </head>
   <body class="bg-page font-sans text-text antialiased">
-    <div x-data="tarotApp()" x-init="init()" class="min-h-screen">
-      <main class="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-        <header
-          class="flex flex-col gap-4 border-b border-border pb-5 md:flex-row md:items-end md:justify-between"
-        >
-          <div class="space-y-1">
-            <h1 class="text-2xl font-semibold tracking-tight">Tarot draw</h1>
-            <p class="text-sm text-muted">
-              Draw cards, read the spread, and keep the result in one page.
-            </p>
-          </div>
-
-          <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <label class="space-y-2 text-sm">
-              <span class="block text-muted">Spread</span>
-              <select
-                x-model.number="spreadSize"
-                class="w-full rounded-md border border-border bg-surface px-3 py-2 text-text outline-none transition focus:border-accent"
-              >
-                <option :value="1">Single card</option>
-                <option :value="3">Three cards</option>
-                <option :value="5">Five cards</option>
-              </select>
-            </label>
-
-            <label class="space-y-2 text-sm sm:col-span-2 lg:col-span-1">
-              <span class="block text-muted">Question</span>
-              <input
-                x-model.trim="question"
-                type="text"
-                placeholder="Optional"
-                class="w-full rounded-md border border-border bg-surface px-3 py-2 text-text outline-none transition focus:border-accent"
-              />
-            </label>
-
-            <label
-              class="flex items-center gap-3 rounded-md border border-border bg-surface px-3 py-2 text-sm"
-            >
-              <input
-                x-model="allowReversals"
-                type="checkbox"
-                class="h-4 w-4 rounded border-border bg-surface text-accent focus:ring-accent"
-              />
-              <span>Allow reversals</span>
-            </label>
-
-            <div class="flex gap-2">
+    <div x-data="tarotApp" class="min-h-screen">
+      <main class="mx-auto w-full px-4 py-6 sm:px-6 lg:px-8">
+        <section class="mb-6">
+          <div class="mx-auto w-full max-w-md rounded-md border border-border bg-surface p-5 shadow-card">
+            <div>
               <button
                 @click="drawCards()"
                 type="button"
                 class="w-full rounded-md bg-accent px-3 py-2 text-sm font-medium text-page transition hover:opacity-90"
               >
-                Draw cards
-              </button>
-              <button
-                @click="clearReading()"
-                type="button"
-                class="rounded-md border border-border px-3 py-2 text-sm font-medium text-text transition hover:bg-surface"
-              >
-                Clear
+                Draw 5 cards
               </button>
             </div>
           </div>
-        </header>
+        </section>
 
-        <section class="mt-6 grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <aside class="space-y-4 rounded-md border border-border bg-surface p-4 shadow-card">
-            <div class="space-y-2">
-              <h2 class="text-base font-semibold">Deck</h2>
-              <p class="text-sm text-muted">
-                <span x-text="deck.length"></span> cards total. Draws are random and
-                cards do not repeat within the same spread.
-              </p>
-            </div>
-
-            <div class="space-y-2 border-t border-border pt-4">
-              <h2 class="text-base font-semibold">Current setup</h2>
-              <dl class="space-y-2 text-sm">
-                <div class="flex items-center justify-between gap-4">
-                  <dt class="text-muted">Spread size</dt>
-                  <dd x-text="spreadLabel"></dd>
-                </div>
-                <div class="flex items-center justify-between gap-4">
-                  <dt class="text-muted">Reversals</dt>
-                  <dd x-text="allowReversals ? 'On' : 'Off'"></dd>
-                </div>
-                <div class="flex items-center justify-between gap-4">
-                  <dt class="text-muted">Question</dt>
-                  <dd class="text-right" x-text="question || 'None'"></dd>
-                </div>
-              </dl>
-            </div>
-
-            <div class="space-y-2 border-t border-border pt-4">
-              <h2 class="text-base font-semibold">How it works</h2>
-              <ul class="space-y-2 text-sm text-muted">
-                <li>Use the built-in deck for quick readings.</li>
-                <li>Each card image is generated in the browser.</li>
-                <li>Interpretations cover upright and reversed meanings.</li>
-              </ul>
-            </div>
-          </aside>
-
-          <section class="space-y-4">
-            <template x-if="drawnCards.length === 0">
-              <div class="rounded-md border border-border bg-surface p-6 shadow-card">
-                <p class="text-sm text-muted">
-                  No cards drawn yet. Pick a spread and draw.
-                </p>
-              </div>
-            </template>
-
-            <template x-if="drawnCards.length > 0">
-              <div class="rounded-md border border-border bg-surface p-4 shadow-card">
-                <div class="flex flex-col gap-2 border-b border-border pb-4">
-                  <h2 class="text-base font-semibold">Reading</h2>
-                  <p class="text-sm text-muted" x-show="question">
-                    <span class="text-text">Question:</span>
-                    <span x-text="question"></span>
-                  </p>
+        <section class="space-y-4">
+          <template x-if="drawnCards.length > 0">
+            <div class="rounded-md border border-border bg-surface p-4 shadow-card lg:mx-auto lg:w-fit">
+                <div class="border-b border-border pb-4">
                   <p class="text-sm text-muted" x-text="readingSummary"></p>
                 </div>
 
-                <div class="mt-4 grid gap-4 xl:grid-cols-2">
+                <div class="mt-4">
+                  <div
+                    x-ref="cardsCarousel"
+                    class="gap-4 pb-2 lg:flex lg:flex-wrap lg:justify-center lg:overflow-visible lg:snap-none lg:pb-0"
+                    :class="drawnCards.length > 1 ? 'flex overflow-hidden snap-x snap-mandatory' : 'space-y-4'"
+                  >
                   <template x-for="card in drawnCards" :key="card.slot + card.name">
-                    <article class="rounded-md border border-border bg-panel p-4">
-                      <div class="grid gap-4 md:grid-cols-[220px_minmax(0,1fr)]">
-                        <div class="rounded-md border border-border bg-page p-3">
-                          <img
-                            :src="card.image"
-                            :alt="card.name"
-                            :class="card.reversed ? 'rotate-180' : ''"
-                            class="mx-auto h-auto w-full max-w-[180px] transition duration-150"
-                          />
+                    <article
+                      data-card-slide
+                      class="w-full rounded-md border border-border bg-panel p-4 lg:w-[300px] lg:min-w-[300px]"
+                      :class="drawnCards.length > 1 ? 'min-w-full snap-center' : 'mx-auto'"
+                    >
+                      <div class="space-y-4">
+                        <div class="border-b border-border pb-3">
+                          <div class="flex min-h-10 items-center">
+                            <h3
+                              class="max-h-10 overflow-hidden text-base font-semibold leading-5"
+                              x-text="card.name"
+                            ></h3>
+                          </div>
+                          <div class="mt-2 flex min-h-8 items-center justify-between gap-4">
+                            <span
+                              class="inline-flex h-9 shrink-0 items-center rounded-md border border-border px-3 text-sm font-medium text-text"
+                              x-text="card.slotLabel"
+                            ></span>
+                          </div>
                         </div>
 
-                        <div class="space-y-3">
-                          <div class="border-b border-border pb-3">
-                            <div class="flex items-center justify-between gap-4">
-                              <h3 class="text-lg font-semibold" x-text="card.name"></h3>
-                              <span
-                                class="rounded-md border border-border px-2 py-1 text-xs text-muted"
-                                x-text="card.slotLabel"
-                              ></span>
+                        <div class="rounded-md border border-border bg-page p-3">
+                          <div
+                            class="mx-auto flex max-w-[150px] items-center justify-center overflow-hidden rounded-sm border border-border bg-paper"
+                            style="aspect-ratio: 1112 / 1920"
+                          >
+                            <div class="relative h-full w-full">
+                              <div
+                                x-show="!card.imageLoaded && !card.imageError"
+                                class="absolute inset-0 flex items-center justify-center bg-paper px-4 text-center text-sm text-ink"
+                              >
+                                Loading image
+                              </div>
+                              <img
+                                x-show="!card.imageError"
+                                :src="card.imageUrl"
+                                :alt="card.name"
+                                :class="card.reversed ? 'rotate-180' : ''"
+                                loading="lazy"
+                                class="h-full w-full object-contain transition duration-150"
+                                @load="card.imageLoaded = true"
+                                @error="card.imageError = true; card.imageLoaded = false"
+                              />
+                              <div
+                                x-show="card.imageError"
+                                class="absolute inset-0 flex items-center justify-center bg-paper px-4 text-center text-sm text-ink"
+                              >
+                                Image unavailable
+                              </div>
                             </div>
-                            <p class="mt-1 text-sm text-muted">
-                              <span x-text="card.arcana"></span>
-                              <span x-show="card.suit"> • <span x-text="card.suit"></span></span>
-                              <span> • </span>
-                              <span x-text="card.reversed ? 'Reversed' : 'Upright'"></span>
-                            </p>
                           </div>
 
-                          <div class="space-y-2">
-                            <p class="text-sm leading-6 text-text" x-text="card.meaning"></p>
-                            <p class="text-sm leading-6 text-muted" x-text="card.application"></p>
+                          <div
+                            x-show="drawnCards.length > 1"
+                            class="mt-3 flex items-center justify-between gap-3 lg:hidden"
+                          >
+                            <button
+                              @click="scrollCards(-1)"
+                              type="button"
+                              class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/85 text-base text-page transition hover:bg-white"
+                              aria-label="Previous card"
+                            >
+                              &larr;
+                            </button>
+                            <button
+                              @click="scrollCards(1)"
+                              type="button"
+                              class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/85 text-base text-page transition hover:bg-white"
+                              aria-label="Next card"
+                            >
+                              &rarr;
+                            </button>
                           </div>
 
-                          <div>
-                            <h4 class="text-sm font-medium">Keywords</h4>
-                            <div class="mt-2 flex flex-wrap gap-2">
-                              <template x-for="keyword in card.keywords" :key="keyword">
-                                <span
-                                  class="rounded-md border border-border px-2 py-1 text-xs text-muted"
-                                  x-text="keyword"
-                                ></span>
-                              </template>
+                          <div class="mt-3 space-y-4 text-left">
+                            <div class="border-b border-border pb-3">
+                              <p class="text-sm text-muted">
+                                <span x-text="card.arcana"></span>
+                                <span x-show="card.suit"> • <span x-text="card.suit"></span></span>
+                                <span> • </span>
+                                <span x-text="card.reversed ? 'Reversed' : 'Upright'"></span>
+                              </p>
+                            </div>
+
+                            <div class="space-y-2">
+                              <p class="text-sm leading-6 text-text" x-text="card.meaning"></p>
+                              <p class="text-sm leading-6 text-muted" x-text="card.application"></p>
+                            </div>
+
+                            <div class="space-y-2">
+                              <p class="text-xs uppercase tracking-[0.14em] text-muted">Keywords</p>
+                              <div class="flex flex-wrap gap-2">
+                                <template x-for="keyword in card.keywords" :key="keyword">
+                                  <span
+                                    class="rounded-md border border-border px-2 py-1 text-xs text-muted"
+                                    x-text="keyword"
+                                  ></span>
+                                </template>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
                     </article>
                   </template>
+                  </div>
                 </div>
-              </div>
-            </template>
-          </section>
+            </div>
+          </template>
         </section>
       </main>
     </div>
-
-    <script>
-      function tarotApp() {
-        return {
-          deck: [],
-          spreadSize: 3,
-          allowReversals: true,
-          question: "",
-          drawnCards: [],
-          readingSummary: "",
-
-          init() {
-            this.deck = buildDeck();
-          },
-
-          get spreadLabel() {
-            return { 1: "Single", 3: "Three card", 5: "Five card" }[this.spreadSize];
-          },
-
-          drawCards() {
-            const pool = [...this.deck];
-            const cards = [];
-
-            for (let index = 0; index < this.spreadSize; index += 1) {
-              const pickedIndex = Math.floor(Math.random() * pool.length);
-              const baseCard = pool.splice(pickedIndex, 1)[0];
-              const reversed = this.allowReversals ? Math.random() < 0.5 : false;
-
-              cards.push({
-                ...baseCard,
-                slot: index + 1,
-                slotLabel: spreadPositions(this.spreadSize)[index],
-                reversed,
-                meaning: getMeaning(baseCard, reversed),
-                application: getApplication(baseCard, reversed),
-                keywords: getKeywords(baseCard, reversed),
-                image: buildCardImage(baseCard),
-              });
-            }
-
-            this.drawnCards = cards;
-            this.readingSummary = summarizeReading(cards, this.question);
-          },
-
-          clearReading() {
-            this.drawnCards = [];
-            this.readingSummary = "";
-          },
-        };
-      }
-
-      function buildDeck() {
-        return [...buildMajorArcana(), ...buildMinorArcana()];
-      }
-
-      function buildMajorArcana() {
-        return [
-          {
-            name: "The Fool",
-            arcana: "Major Arcana",
-            number: 0,
-            symbol: "◌",
-            upright:
-              "A fresh start, curiosity, and movement before the whole path is mapped out.",
-            reversed:
-              "Impulsiveness, avoidable risk, or hesitation that keeps a new chapter stalled.",
-          },
-          {
-            name: "The Magician",
-            arcana: "Major Arcana",
-            number: 1,
-            symbol: "✶",
-            upright:
-              "Skill, focus, and the ability to turn intent into something concrete.",
-            reversed:
-              "Scattered energy, weak follow-through, or using influence in a shallow way.",
-          },
-          {
-            name: "The High Priestess",
-            arcana: "Major Arcana",
-            number: 2,
-            symbol: "☾",
-            upright:
-              "Intuition, restraint, and information that matters more when observed than forced.",
-            reversed:
-              "Blocked instinct, mixed signals, or avoiding what you already sense is true.",
-          },
-          {
-            name: "The Empress",
-            arcana: "Major Arcana",
-            number: 3,
-            symbol: "❀",
-            upright:
-              "Growth, care, and conditions that help something steady become abundant.",
-            reversed:
-              "Smothering, neglect, or a lack of support around what needs tending.",
-          },
-          {
-            name: "The Emperor",
-            arcana: "Major Arcana",
-            number: 4,
-            symbol: "▣",
-            upright:
-              "Structure, authority, and a need for clear rules or ownership.",
-            reversed:
-              "Rigidity, control issues, or weak leadership that creates instability.",
-          },
-          {
-            name: "The Hierophant",
-            arcana: "Major Arcana",
-            number: 5,
-            symbol: "✛",
-            upright:
-              "Tradition, trusted guidance, and value in established methods.",
-            reversed:
-              "Questioning the script, rejecting stale rules, or conforming without conviction.",
-          },
-          {
-            name: "The Lovers",
-            arcana: "Major Arcana",
-            number: 6,
-            symbol: "♥",
-            upright:
-              "Alignment, shared values, and a choice that should match what matters most.",
-            reversed:
-              "Misalignment, strained bonds, or choices made against your own values.",
-          },
-          {
-            name: "The Chariot",
-            arcana: "Major Arcana",
-            number: 7,
-            symbol: "➝",
-            upright:
-              "Direction, discipline, and progress earned through controlled effort.",
-            reversed:
-              "Loss of control, competing priorities, or pushing forward without traction.",
-          },
-          {
-            name: "Strength",
-            arcana: "Major Arcana",
-            number: 8,
-            symbol: "∞",
-            upright:
-              "Patience, courage, and influence built through composure rather than force.",
-            reversed:
-              "Self-doubt, impatience, or reacting from stress instead of steadiness.",
-          },
-          {
-            name: "The Hermit",
-            arcana: "Major Arcana",
-            number: 9,
-            symbol: "☷",
-            upright:
-              "Reflection, solitude, and stepping back long enough to see clearly.",
-            reversed:
-              "Isolation, overthinking, or staying withdrawn past the useful point.",
-          },
-          {
-            name: "Wheel of Fortune",
-            arcana: "Major Arcana",
-            number: 10,
-            symbol: "◍",
-            upright:
-              "Change in motion, timing, and events that shift faster than expected.",
-            reversed:
-              "Resistance to change, bad timing, or repeating the same cycle again.",
-          },
-          {
-            name: "Justice",
-            arcana: "Major Arcana",
-            number: 11,
-            symbol: "⚖",
-            upright:
-              "Accountability, fairness, and the need to face the facts cleanly.",
-            reversed:
-              "Bias, avoidance, or consequences that follow from unclear judgment.",
-          },
-          {
-            name: "The Hanged Man",
-            arcana: "Major Arcana",
-            number: 12,
-            symbol: "⥮",
-            upright:
-              "Pause, surrender, and a better answer that comes from changing perspective.",
-            reversed:
-              "Stalling, martyrdom, or refusing the pause that would clarify things.",
-          },
-          {
-            name: "Death",
-            arcana: "Major Arcana",
-            number: 13,
-            symbol: "✕",
-            upright:
-              "An ending that clears space for the next stage to begin properly.",
-            reversed:
-              "Dragging out an ending, clinging to what is already done, or fearing change.",
-          },
-          {
-            name: "Temperance",
-            arcana: "Major Arcana",
-            number: 14,
-            symbol: "⚗",
-            upright:
-              "Balance, moderation, and steady integration between different needs.",
-            reversed:
-              "Excess, poor pacing, or pieces that are not working together yet.",
-          },
-          {
-            name: "The Devil",
-            arcana: "Major Arcana",
-            number: 15,
-            symbol: "⛓",
-            upright:
-              "Attachment, habit, or desire that has more control than it should.",
-            reversed:
-              "Breaking a pattern, seeing the trap clearly, or loosening unhealthy ties.",
-          },
-          {
-            name: "The Tower",
-            arcana: "Major Arcana",
-            number: 16,
-            symbol: "⚡",
-            upright:
-              "Disruption, truth arriving hard, and structures failing where they were weak.",
-            reversed:
-              "A slow collapse, resisting the obvious, or trying to contain necessary change.",
-          },
-          {
-            name: "The Star",
-            arcana: "Major Arcana",
-            number: 17,
-            symbol: "★",
-            upright:
-              "Hope, renewal, and a calmer sense of direction after strain.",
-            reversed:
-              "Low morale, doubt, or recovery that needs more time and trust.",
-          },
-          {
-            name: "The Moon",
-            arcana: "Major Arcana",
-            number: 18,
-            symbol: "☽",
-            upright:
-              "Uncertainty, instinct, and conditions where not everything is visible yet.",
-            reversed:
-              "Confusion starting to clear, exposed illusions, or fear losing its grip.",
-          },
-          {
-            name: "The Sun",
-            arcana: "Major Arcana",
-            number: 19,
-            symbol: "☼",
-            upright:
-              "Clarity, warmth, and the confidence that comes from seeing things directly.",
-            reversed:
-              "Partial success, delayed joy, or clarity that is present but underused.",
-          },
-          {
-            name: "Judgement",
-            arcana: "Major Arcana",
-            number: 20,
-            symbol: "✺",
-            upright:
-              "Reckoning, renewal, and acting on what you now know for sure.",
-            reversed:
-              "Avoiding the call, harsh self-criticism, or delaying the needed decision.",
-          },
-          {
-            name: "The World",
-            arcana: "Major Arcana",
-            number: 21,
-            symbol: "◎",
-            upright:
-              "Completion, integration, and the sense that a full cycle has landed.",
-            reversed:
-              "Loose ends, stalled completion, or progress that needs one last pass.",
-          },
-        ];
-      }
-
-      function buildMinorArcana() {
-        const suits = [
-          {
-            name: "Wands",
-            topic: "initiative, ambition, momentum, and creative drive",
-            symbol: "wand",
-          },
-          {
-            name: "Cups",
-            topic: "emotion, closeness, intuition, and memory",
-            symbol: "cup",
-          },
-          {
-            name: "Swords",
-            topic: "thought, language, pressure, and conflict",
-            symbol: "sword",
-          },
-          {
-            name: "Pentacles",
-            topic: "work, money, health, and practical stability",
-            symbol: "pentacle",
-          },
-        ];
-
-        const ranks = [
-          "Ace",
-          "Two",
-          "Three",
-          "Four",
-          "Five",
-          "Six",
-          "Seven",
-          "Eight",
-          "Nine",
-          "Ten",
-          "Page",
-          "Knight",
-          "Queen",
-          "King",
-        ];
-
-        return suits.flatMap((suit) =>
-          ranks.map((rank, index) => ({
-            name: `${rank} of ${suit.name}`,
-            arcana: "Minor Arcana",
-            suit: suit.name,
-            topic: suit.topic,
-            symbol: suit.symbol,
-            number: index + 1,
-            rank,
-          }))
-        );
-      }
-
-      function spreadPositions(size) {
-        return {
-          1: ["Single card"],
-          3: ["Past", "Present", "Next step"],
-          5: ["Current state", "Pressure", "What helps", "What changes", "Likely outcome"],
-        }[size];
-      }
-
-      function getMeaning(card, reversed) {
-        if (card.arcana === "Major Arcana") {
-          return reversed ? card.reversed : card.upright;
-        }
-
-        const rankText = minorRankMeaning(card.rank, reversed);
-        const direction = reversed
-          ? "The energy is turned inward, delayed, or distorted."
-          : "The energy is direct, available, and easier to act on.";
-
-        return `${rankText} In ${card.topic}, ${direction}`;
-      }
-
-      function getApplication(card, reversed) {
-        if (card.arcana === "Major Arcana") {
-          const prompt = reversed
-            ? "Treat this as a sign to slow down and clean up what is off."
-            : "Treat this as the main lesson or turning point in the reading.";
-          return `${prompt}`;
-        }
-
-        const suitGuidance = {
-          Wands: reversed
-            ? "Cut noise, pick one direction, and stop burning effort on scattered starts."
-            : "Back the strongest idea and move it with clear effort instead of waiting for certainty.",
-          Cups: reversed
-            ? "Name the feeling directly before it leaks into decisions sideways."
-            : "Trust the tone of the connection and respond with honesty rather than over-control.",
-          Swords: reversed
-            ? "Check assumptions, strip out exaggeration, and avoid arguing with your own projection."
-            : "Use direct language, clean thinking, and let the facts do the work.",
-          Pentacles: reversed
-            ? "Tighten the routine, budget, or process before chasing a larger result."
-            : "Favor steady execution, practical care, and work that compounds over time.",
-        };
-
-        return suitGuidance[card.suit];
-      }
-
-      function getKeywords(card, reversed) {
-        if (card.arcana === "Major Arcana") {
-          return majorKeywords(card.name, reversed);
-        }
-
-        const suitKeywords = {
-          Wands: ["drive", "motion", "risk"],
-          Cups: ["emotion", "intuition", "bond"],
-          Swords: ["clarity", "pressure", "decision"],
-          Pentacles: ["stability", "work", "resources"],
-        };
-
-        const rankKeywords = {
-          Ace: ["opening", "potential", "spark"],
-          Two: ["choice", "balance", "exchange"],
-          Three: ["growth", "support", "results"],
-          Four: ["structure", "pause", "consolidation"],
-          Five: ["friction", "stress", "test"],
-          Six: ["adjustment", "movement", "support"],
-          Seven: ["evaluation", "defense", "strain"],
-          Eight: ["speed", "pattern", "effort"],
-          Nine: ["resilience", "pressure", "threshold"],
-          Ten: ["culmination", "load", "full weight"],
-          Page: ["message", "study", "curiosity"],
-          Knight: ["pursuit", "action", "change"],
-          Queen: ["composure", "mastery", "care"],
-          King: ["authority", "responsibility", "control"],
-        };
-
-        const reversalKeyword = reversed ? ["blocked"] : ["active"];
-        return [...rankKeywords[card.rank], ...suitKeywords[card.suit], ...reversalKeyword].slice(0, 4);
-      }
-
-      function minorRankMeaning(rank, reversed) {
-        const meanings = {
-          Ace: {
-            upright: "A new opening or clean starting point is available.",
-            reversed: "The opening exists, but hesitation or poor timing is holding it back.",
-          },
-          Two: {
-            upright: "A choice or balancing act needs a steady hand.",
-            reversed: "The balance is off, and indecision is making it worse.",
-          },
-          Three: {
-            upright: "Growth shows up through collaboration or early visible progress.",
-            reversed: "Progress is uneven, or the support around it is not working well.",
-          },
-          Four: {
-            upright: "Stability comes from structure, pause, or protecting what already works.",
-            reversed: "The structure is too rigid or too weak to hold.",
-          },
-          Five: {
-            upright: "Friction exposes the pressure point that cannot be ignored.",
-            reversed: "Conflict eases, but the root issue still needs a direct response.",
-          },
-          Six: {
-            upright: "Movement toward balance, support, or a fairer exchange is possible.",
-            reversed: "Recovery is partial, and the imbalance still shows underneath.",
-          },
-          Seven: {
-            upright: "This is a card of evaluation, defense, or pushing through resistance.",
-            reversed: "Defensiveness, fatigue, or doubt makes the position harder to hold.",
-          },
-          Eight: {
-            upright: "Speed, repetition, or strong focus drives events forward.",
-            reversed: "Things snag, stall, or become repetitive without progress.",
-          },
-          Nine: {
-            upright: "You are close to the end, but the pressure is real.",
-            reversed: "Strain is leaking into fear, avoidance, or overreaction.",
-          },
-          Ten: {
-            upright: "The suit reaches full weight, for better or worse.",
-            reversed: "The weight is unsustainable, and something has to be released.",
-          },
-          Page: {
-            upright: "A message, lesson, or early-stage opportunity is entering the picture.",
-            reversed: "The signal is immature, unclear, or easy to misread.",
-          },
-          Knight: {
-            upright: "Movement comes through pursuit, urgency, and direct action.",
-            reversed: "The movement is reckless, stalled, or aimed at the wrong target.",
-          },
-          Queen: {
-            upright: "Mature control comes from calm confidence and practiced judgment.",
-            reversed: "Control slips into moodiness, distance, or overprotection.",
-          },
-          King: {
-            upright: "Leadership, standards, and decisive responsibility shape the outcome.",
-            reversed: "Authority becomes rigid, absent, or self-serving.",
-          },
-        };
-
-        return reversed ? meanings[rank].reversed : meanings[rank].upright;
-      }
-
-      function majorKeywords(name, reversed) {
-        const map = {
-          "The Fool": ["start", "risk", "trust", reversed ? "hesitation" : "openness"],
-          "The Magician": ["skill", "intent", "focus", reversed ? "misuse" : "execution"],
-          "The High Priestess": ["intuition", "restraint", "signal", reversed ? "block" : "knowing"],
-          "The Empress": ["growth", "care", "support", reversed ? "neglect" : "abundance"],
-          "The Emperor": ["order", "authority", "structure", reversed ? "rigidity" : "control"],
-          "The Hierophant": ["tradition", "teaching", "method", reversed ? "rebellion" : "guidance"],
-          "The Lovers": ["values", "union", "choice", reversed ? "misalignment" : "alignment"],
-          "The Chariot": ["direction", "discipline", "drive", reversed ? "drift" : "progress"],
-          Strength: ["courage", "patience", "composure", reversed ? "doubt" : "influence"],
-          "The Hermit": ["solitude", "reflection", "clarity", reversed ? "withdrawal" : "search"],
-          "Wheel of Fortune": ["change", "timing", "cycle", reversed ? "resistance" : "shift"],
-          Justice: ["truth", "fairness", "consequence", reversed ? "bias" : "balance"],
-          "The Hanged Man": ["pause", "perspective", "release", reversed ? "stall" : "surrender"],
-          Death: ["ending", "change", "transition", reversed ? "clinging" : "renewal"],
-          Temperance: ["balance", "pace", "integration", reversed ? "excess" : "moderation"],
-          "The Devil": ["attachment", "habit", "desire", reversed ? "release" : "bondage"],
-          "The Tower": ["shock", "truth", "collapse", reversed ? "avoidance" : "disruption"],
-          "The Star": ["hope", "repair", "trust", reversed ? "doubt" : "renewal"],
-          "The Moon": ["uncertainty", "instinct", "fog", reversed ? "exposure" : "mystery"],
-          "The Sun": ["clarity", "joy", "confidence", reversed ? "delay" : "success"],
-          Judgement: ["reckoning", "call", "renewal", reversed ? "avoidance" : "decision"],
-          "The World": ["completion", "closure", "integration", reversed ? "delay" : "arrival"],
-        };
-
-        return map[name];
-      }
-
-      function summarizeReading(cards, question) {
-        const majorCount = cards.filter((card) => card.arcana === "Major Arcana").length;
-        const reversedCount = cards.filter((card) => card.reversed).length;
-        const suitCounts = cards.reduce((counts, card) => {
-          if (card.suit) {
-            counts[card.suit] = (counts[card.suit] || 0) + 1;
-          }
-          return counts;
-        }, {});
-
-        const dominantSuit = Object.entries(suitCounts).sort((a, b) => b[1] - a[1])[0];
-        const suitSummary = dominantSuit
-          ? `${dominantSuit[0]} set the tone, so the reading leans toward ${dominantSuitSummary(
-              dominantSuit[0]
-            )}.`
-          : "Major Arcana dominate, so the reading points to broader turning points more than day-to-day details.";
-
-        const reversalSummary =
-          reversedCount === 0
-            ? "Everything is upright, which usually means the message is direct and easier to act on."
-            : reversedCount >= Math.ceil(cards.length / 2)
-              ? "Several cards are reversed, so friction, delay, or internal conflict matter as much as the visible situation."
-              : "There is some resistance in the spread, but it looks manageable if named early.";
-
-        if (question) {
-          return `For "${question}", ${suitSummary} ${reversalSummary}`;
-        }
-
-        return `${suitSummary} ${reversalSummary}`;
-      }
-
-      function dominantSuitSummary(suit) {
-        return {
-          Wands: "action, timing, and momentum",
-          Cups: "emotion, connection, and instinct",
-          Swords: "clarity, conflict, and hard decisions",
-          Pentacles: "practical work, money, and stability",
-        }[suit];
-      }
-
-      function buildCardImage(card) {
-        const title = escapeHtml(card.name.toUpperCase());
-        const subtitle = card.arcana === "Major Arcana" ? romanize(card.number) : escapeHtml(card.rank);
-        const art =
-          card.arcana === "Major Arcana" ? renderMajorSymbol(card.symbol) : renderMinorSymbol(card.symbol);
-
-        const svg = `
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 380" role="img" aria-label="${escapeHtml(
-            card.name
-          )}">
-            <rect x="1" y="1" width="238" height="378" rx="14" fill="#f4efe6" stroke="#1b1b1b" stroke-width="2"/>
-            <rect x="14" y="14" width="212" height="352" rx="8" fill="none" stroke="#1b1b1b" stroke-width="1.5"/>
-            <text x="120" y="36" text-anchor="middle" font-size="13" font-family="'IBM Plex Sans', sans-serif" letter-spacing="0.4" fill="#1b1b1b">${title}</text>
-            <line x1="32" y1="54" x2="208" y2="54" stroke="#1b1b1b" stroke-width="1"/>
-            ${art}
-            <line x1="32" y1="322" x2="208" y2="322" stroke="#1b1b1b" stroke-width="1"/>
-            <text x="120" y="346" text-anchor="middle" font-size="16" font-weight="600" font-family="'IBM Plex Sans', sans-serif" fill="#1b1b1b">${subtitle}</text>
-          </svg>
-        `;
-
-        return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-      }
-
-      function renderMajorSymbol(symbol) {
-        return `
-          <circle cx="120" cy="188" r="72" fill="none" stroke="#1b1b1b" stroke-width="1.5"/>
-          <circle cx="120" cy="188" r="58" fill="none" stroke="#1b1b1b" stroke-width="1"/>
-          <text x="120" y="212" text-anchor="middle" font-size="72" font-family="'IBM Plex Sans', sans-serif" fill="#1b1b1b">${escapeHtml(
-            symbol
-          )}</text>
-        `;
-      }
-
-      function renderMinorSymbol(symbol) {
-        const symbols = {
-          wand: `
-            <g transform="translate(120 188)">
-              <line x1="0" y1="-70" x2="0" y2="70" stroke="#1b1b1b" stroke-width="8" stroke-linecap="round"/>
-              <path d="M0 -42 C18 -46 30 -58 32 -74" fill="none" stroke="#1b1b1b" stroke-width="4" stroke-linecap="round"/>
-              <path d="M0 12 C-18 8 -30 -4 -32 -20" fill="none" stroke="#1b1b1b" stroke-width="4" stroke-linecap="round"/>
-            </g>
-          `,
-          cup: `
-            <g transform="translate(120 188)">
-              <path d="M-48 -50 H48 C44 -12 32 18 0 36 C-32 18 -44 -12 -48 -50Z" fill="none" stroke="#1b1b1b" stroke-width="6" stroke-linejoin="round"/>
-              <path d="M-20 48 H20" fill="none" stroke="#1b1b1b" stroke-width="6" stroke-linecap="round"/>
-              <path d="M0 36 V52" fill="none" stroke="#1b1b1b" stroke-width="6" stroke-linecap="round"/>
-            </g>
-          `,
-          sword: `
-            <g transform="translate(120 188)">
-              <line x1="0" y1="-76" x2="0" y2="48" stroke="#1b1b1b" stroke-width="7" stroke-linecap="round"/>
-              <polygon points="0,-98 12,-72 -12,-72" fill="#1b1b1b"/>
-              <line x1="-34" y1="14" x2="34" y2="14" stroke="#1b1b1b" stroke-width="7" stroke-linecap="round"/>
-              <line x1="0" y1="48" x2="0" y2="72" stroke="#1b1b1b" stroke-width="7" stroke-linecap="round"/>
-            </g>
-          `,
-          pentacle: `
-            <g transform="translate(120 188)">
-              <circle cx="0" cy="0" r="68" fill="none" stroke="#1b1b1b" stroke-width="6"/>
-              <polygon points="0,-40 12,-12 40,-12 18,6 28,34 0,18 -28,34 -18,6 -40,-12 -12,-12" fill="none" stroke="#1b1b1b" stroke-width="6" stroke-linejoin="round"/>
-            </g>
-          `,
-        };
-
-        return symbols[symbol];
-      }
-
-      function romanize(number) {
-        const map = [
-          [10, "X"],
-          [9, "IX"],
-          [5, "V"],
-          [4, "IV"],
-          [1, "I"],
-        ];
-
-        if (number === 0) {
-          return "0";
-        }
-
-        let value = number;
-        let output = "";
-
-        for (const [arabic, roman] of map) {
-          while (value >= arabic) {
-            output += roman;
-            value -= arabic;
-          }
-        }
-
-        return output;
-      }
-
-      function escapeHtml(value) {
-        return value
-          .replaceAll("&", "&amp;")
-          .replaceAll("<", "&lt;")
-          .replaceAll(">", "&gt;")
-          .replaceAll('"', "&quot;")
-          .replaceAll("'", "&apos;");
-      }
-    </script>
   </body>
 </html>

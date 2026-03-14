@@ -1,0 +1,25 @@
+{
+  "name": "tarot",
+  "version": "1.0.0",
+  "description": "Static tarot card reader",
+  "main": "app.js",
+  "scripts": {
+    "build:css": "tailwindcss -i ./input.css -o ./output.css",
+    "watch:css": "tailwindcss -i ./input.css -o ./output.css --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Matiss1337/tarot.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Matiss1337/tarot/issues"
+  },
+  "homepage": "https://github.com/Matiss1337/tarot#readme",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.2.1",
+    "tailwindcss": "^4.2.1"
+  }
+}
