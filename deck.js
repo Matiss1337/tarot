@@ -418,33 +418,58 @@
   }
 
   function summarizeReading(cards, question) {
+    if (!cards.length) {
+      return "";
+    }
+
+    resetSummarySeed(
+      cards
+        .map((card) => `${card.name}:${card.reversed ? "r" : "u"}:${card.slotLabel || ""}`)
+        .join("|") + `|${question || ""}`
+    );
+
     const reversedCount = cards.filter((card) => card.reversed).length;
+    const majorCount = cards.filter((card) => card.arcana === "Major Arcana").length;
     const suitCounts = cards.reduce((counts, card) => {
       if (card.suit) {
         counts[card.suit] = (counts[card.suit] || 0) + 1;
       }
       return counts;
     }, {});
+    const rankCounts = cards.reduce((counts, card) => {
+      if (card.rank) {
+        counts[card.rank] = (counts[card.rank] || 0) + 1;
+      }
+      return counts;
+    }, {});
 
-    const dominantSuit = Object.entries(suitCounts).sort((a, b) => b[1] - a[1])[0];
-    const suitSummary = dominantSuit
-      ? `${dominantSuit[0]} set the tone, so the reading leans toward ${dominantSuitSummary(
-          dominantSuit[0]
-        )}.`
-      : "Major Arcana dominate, so the reading points to broader turning points more than day-to-day details.";
+    const dominantSuit = getDominantEntry(suitCounts);
+    const repeatedRank = getDominantEntry(rankCounts);
+    const patternSummaries = [
+      buildMajorArcanaSummary(majorCount, cards.length),
+      buildSuitSummary(dominantSuit, suitCounts, cards.length),
+      buildReversalSummary(reversedCount, cards.length),
+      buildRepeatedRankSummary(repeatedRank),
+    ].filter(Boolean);
 
-    const reversalSummary =
-      reversedCount === 0
-        ? "Everything is upright, which usually means the message is direct and easier to act on."
-        : reversedCount >= Math.ceil(cards.length / 2)
-          ? "Several cards are reversed, so friction, delay, or internal conflict matter as much as the visible situation."
-          : "There is some resistance in the spread, but it looks manageable if named early.";
+    const selectedPatterns = sampleMany(patternSummaries, Math.min(patternSummaries.length, 2));
 
-    if (question) {
-      return `For "${question}", ${suitSummary} ${reversalSummary}`;
+    if (cards.length === 5) {
+      const [currentState, pressure, help, change, outcome] = cards;
+
+      return [
+        buildFiveCardOverview(currentState, outcome, question),
+        buildPressureHelpSummary(pressure, help),
+        ...selectedPatterns,
+        buildChangeOutcomeSummary(change, help, outcome),
+      ].join(" ");
     }
 
-    return `${suitSummary} ${reversalSummary}`;
+    return [
+      buildGeneralOverview(cards, question),
+      ...selectedPatterns,
+      buildGeneralAdvice(cards[cards.length - 1]),
+    ].join(" ");
   }
 
   function dominantSuitSummary(suit) {
@@ -454,6 +479,277 @@
       Swords: "clarity, conflict, and hard decisions",
       Pentacles: "practical work, money, and stability",
     }[suit];
+  }
+
+  function getDominantEntry(counts) {
+    const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+    if (!entries.length) {
+      return null;
+    }
+
+    if (entries.length > 1 && entries[0][1] === entries[1][1]) {
+      return null;
+    }
+
+    return entries[0];
+  }
+
+  function buildFiveCardOverview(currentState, outcome, question) {
+    const lead = question
+      ? sample([
+          `For "${question},"`,
+          `On "${question},"`,
+          `Around "${question},"`,
+        ])
+      : sample([
+          "This five-card spread opens with",
+          "The reading begins with",
+          "The first movement in this spread is",
+        ]);
+
+    const stateKeyword = currentState.keywords?.[0] || "the present tone";
+    const outcomeKeyword = outcome.keywords?.[0] || "the likely result";
+
+    return sample([
+      `${lead} ${currentState.name} in ${currentState.slotLabel.toLowerCase()} and leans toward ${outcome.name} in ${outcome.slotLabel.toLowerCase()}, so the story moves from ${stateKeyword} toward ${outcomeKeyword}.`,
+      `${lead} ${currentState.name} names the situation now, while ${outcome.name} shows where the line of events is trying to land.`,
+      `${lead} the spread starts in ${currentState.name} and resolves through ${outcome.name}, which frames the whole reading as a move from ${stateKeyword} toward ${outcomeKeyword}.`,
+    ]);
+  }
+
+  function buildPressureHelpSummary(pressure, help) {
+    if (pressure.arcana === "Major Arcana" || help.arcana === "Major Arcana") {
+      return sample([
+        `${pressure.name} describes the pressure, but ${help.name} suggests the answer is less a quick tactic and more a shift in perspective or timing.`,
+        `What presses here is ${pressure.name}; what helps is ${help.name}, which makes the solution feel like a lesson to embody rather than a small fix.`,
+      ]);
+    }
+
+    const relation = elementalRelationship(pressure.suit, help.suit);
+
+    if (relation === "same") {
+      return sample([
+        `${pressure.name} and ${help.name} come from the same suit, so the remedy lives in the exact area where the strain is happening.`,
+        `${help.name} answers ${pressure.name} on its own turf, which usually means the pressure can be handled directly rather than sidestepped.`,
+      ]);
+    }
+
+    if (relation === "friendly") {
+      return sample([
+        `${pressure.name} meets ${help.name} through compatible elements, so the support in this spread is real if you use it consistently.`,
+        `${help.name} strengthens ${pressure.name} rather than cancelling it out, which suggests the pressure is workable with the right follow-through.`,
+      ]);
+    }
+
+    if (relation === "hostile") {
+      return sample([
+        `${pressure.name} and ${help.name} clash elementally, so the way through is not more of the same; it needs a different mode entirely.`,
+        `${help.name} does not solve ${pressure.name} by force. It redirects it, which is usually a sign that the current approach is mismatched to the problem.`,
+      ]);
+    }
+
+    return sample([
+      `${pressure.name} and ${help.name} do not fully reinforce each other, which makes this a reading about balance rather than a single obvious answer.`,
+      `${help.name} sits beside ${pressure.name} without cancelling it, so progress depends on pacing and adjustment more than a clean breakthrough.`,
+    ]);
+  }
+
+  function buildMajorArcanaSummary(majorCount, total) {
+    if (majorCount === 0) {
+      return sample([
+        "The spread is all Minor Arcana, which usually means this is still in the realm of choices, habits, and day-to-day handling rather than fate.",
+        "With no Major Arcana present, the reading feels practical: important, but still shaped heavily by what you choose next.",
+      ]);
+    }
+
+    if (majorCount >= Math.ceil(total / 2)) {
+      return sample([
+        `With ${majorCount} Major Arcana in the spread, this reads more like a genuine turning point than a passing mood.`,
+        `${majorCount} Major Arcana push this beyond routine noise. The reading is pointing at a larger lesson or threshold.`,
+      ]);
+    }
+
+    return sample([
+      `The ${majorCount} Major Arcana card${majorCount > 1 ? "s" : ""} here act like pressure points, so a few moments in the spread carry more weight than the rest.`,
+      `${majorCount} Major Arcana card${majorCount > 1 ? "s" : ""} suggest that part of this is ordinary life, but part of it has real consequence and cannot be brushed off.`,
+    ]);
+  }
+
+  function buildSuitSummary(dominantSuit, suitCounts, total) {
+    if (dominantSuit) {
+      const [suit, count] = dominantSuit;
+
+      if (count >= Math.ceil(total / 2)) {
+        return sample([
+          `${suit} dominate the spread, so the reading is strongly about ${dominantSuitSummary(suit)}.`,
+          `There is a clear ${suit} emphasis, which makes ${dominantSuitSummary(suit)} the main language of the reading.`,
+        ]);
+      }
+
+      return sample([
+        `${suit} appear most often, so they quietly set the tone toward ${dominantSuitSummary(suit)}.`,
+        `${suit} are the strongest suit here, which pulls the spread toward ${dominantSuitSummary(suit)} even when other themes show up.`,
+      ]);
+    }
+
+    const suitTypes = Object.keys(suitCounts).length;
+
+    if (suitTypes >= 3) {
+      return sample([
+        "No single suit takes over, so the issue is split across action, emotion, thought, and practical reality at the same time.",
+        "The suits are mixed enough that this does not reduce to one theme; several layers of life are moving together here.",
+      ]);
+    }
+
+    return "";
+  }
+
+  function buildReversalSummary(reversedCount, total) {
+    if (reversedCount === 0) {
+      return sample([
+        "Everything is upright, which usually means the message is visible and the path to action is relatively direct.",
+        "With no reversals, the spread reads openly. The issue may be difficult, but it is not especially hidden.",
+      ]);
+    }
+
+    if (reversedCount >= Math.ceil(total / 2)) {
+      return sample([
+        `With ${reversedCount} reversals, the reading is heavy on delay, internal conflict, or energy that is turning inward before it can move outward.`,
+        `${reversedCount} reversed cards make this feel less blocked by circumstance than tangled by resistance, timing, or mixed signals.`,
+      ]);
+    }
+
+    return sample([
+      `There are ${reversedCount} reversals in the spread, which adds friction without overwhelming the whole message.`,
+      `${reversedCount} reversed card${reversedCount > 1 ? "s" : ""} suggest some drag in the system, but not enough to erase the forward movement.`,
+    ]);
+  }
+
+  function buildRepeatedRankSummary(repeatedRank) {
+    if (!repeatedRank || repeatedRank[1] < 2) {
+      return "";
+    }
+
+    const [rank, count] = repeatedRank;
+
+    return sample([
+      `The repeated ${rank} energy matters here. Seeing it ${count} times puts extra emphasis on ${rankPhaseSummary(rank)}.`,
+      `${count} ${rank} cards echo each other across the spread, which usually means the reading is circling the theme of ${rankPhaseSummary(rank)}.`,
+    ]);
+  }
+
+  function buildChangeOutcomeSummary(change, help, outcome) {
+    if (outcome.reversed) {
+      return sample([
+        `The cleanest advice sits in ${help.name}: ${help.application} If that is ignored, ${outcome.name} is more likely to show up as delay or drag than a clean result.`,
+        `${change.name} marks the hinge point in the spread. ${help.application} That is what reduces the risk of ${outcome.name} arriving in its harder form.`,
+      ]);
+    }
+
+    return sample([
+      `${change.name} shows where the turn happens. The most usable guidance is in ${help.name}: ${help.application}`,
+      `The route forward runs through ${change.name}, but the practical lever is still ${help.name}: ${help.application}`,
+    ]);
+  }
+
+  function buildGeneralOverview(cards, question) {
+    const firstCard = cards[0];
+    const lastCard = cards[cards.length - 1];
+    const lead = question
+      ? sample([`For "${question},"`, `On "${question},"`])
+      : sample(["This spread shows", "The reading points to", "The cards suggest"]);
+
+    return sample([
+      `${lead} a movement from ${firstCard.name} toward ${lastCard.name}, so the message develops rather than staying fixed in one mood.`,
+      `${lead} ${firstCard.name} as the opening note and ${lastCard.name} as the later emphasis, which gives the reading a clear arc.`,
+    ]);
+  }
+
+  function buildGeneralAdvice(card) {
+    return sample([
+      `The clearest takeaway is simple: ${card.application}`,
+      `If you want one usable instruction from the spread, start here: ${card.application}`,
+    ]);
+  }
+
+  function elementalRelationship(firstSuit, secondSuit) {
+    if (!firstSuit || !secondSuit) {
+      return "neutral";
+    }
+
+    if (firstSuit === secondSuit) {
+      return "same";
+    }
+
+    const pair = [firstSuit, secondSuit].sort().join("|");
+
+    if (pair === "Swords|Wands" || pair === "Cups|Pentacles") {
+      return "friendly";
+    }
+
+    if (pair === "Cups|Wands" || pair === "Pentacles|Swords") {
+      return "hostile";
+    }
+
+    return "neutral";
+  }
+
+  function rankPhaseSummary(rank) {
+    return {
+      Ace: "openings and first signals",
+      Two: "choice and balancing",
+      Three: "growth and early results",
+      Four: "structure and consolidation",
+      Five: "friction and testing",
+      Six: "adjustment and rebalancing",
+      Seven: "evaluation and resistance",
+      Eight: "speed and sustained motion",
+      Nine: "pressure near the threshold",
+      Ten: "culmination and full weight",
+      Page: "messages and early learning",
+      Knight: "movement and pursuit",
+      Queen: "mature control and steady care",
+      King: "authority and final responsibility",
+    }[rank];
+  }
+
+  let summarySeed = 1;
+
+  function resetSummarySeed(signature) {
+    summarySeed = hashString(signature);
+  }
+
+  function hashString(value) {
+    let hash = 2166136261;
+
+    for (let index = 0; index < value.length; index += 1) {
+      hash ^= value.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+
+    return (hash >>> 0) || 1;
+  }
+
+  function nextSummarySeed() {
+    summarySeed = (Math.imul(summarySeed, 1664525) + 1013904223) >>> 0;
+    return summarySeed;
+  }
+
+  function sample(list) {
+    return list[nextSummarySeed() % list.length];
+  }
+
+  function sampleMany(list, count) {
+    const pool = [...list];
+    const picked = [];
+
+    while (pool.length && picked.length < count) {
+      const index = nextSummarySeed() % pool.length;
+      picked.push(pool.splice(index, 1)[0]);
+    }
+
+    return picked;
   }
 
   window.TarotDeck = {

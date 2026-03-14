@@ -20,14 +20,26 @@
       <main class="mx-auto w-full px-4 py-6 sm:px-6 lg:px-8">
         <section class="mb-6">
           <div class="mx-auto w-full max-w-md rounded-md border border-border bg-surface p-5 shadow-card">
-            <div>
+            <div class="space-y-3">
               <button
                 @click="drawCards()"
                 type="button"
-                class="w-full rounded-md bg-accent px-3 py-2 text-sm font-medium text-page transition hover:opacity-90"
+                :disabled="drawLocked"
+                :class="drawLocked ? 'cursor-not-allowed opacity-60' : 'hover:opacity-90'"
+                class="w-full rounded-md bg-accent px-3 py-2 text-sm font-medium text-page transition"
+                x-text="drawLocked ? 'Available again tomorrow' : 'Draw 5 cards'"
               >
-                Draw 5 cards
               </button>
+
+              <template x-if="drawLocked">
+                <div class="space-y-1 rounded-md border border-border bg-page px-3 py-3 text-sm">
+                  <p class="text-text" x-text="dailyReadingMessage"></p>
+                  <p class="text-muted">
+                    Next draw in
+                    <span class="font-medium text-text" x-text="timeUntilNextDraw"></span>
+                  </p>
+                </div>
+              </template>
             </div>
           </div>
         </section>
@@ -35,7 +47,7 @@
         <section class="space-y-4">
           <template x-if="drawnCards.length > 0">
             <div class="rounded-md border border-border bg-surface p-4 shadow-card lg:mx-auto lg:w-fit">
-                <div class="border-b border-border pb-4">
+                <div class="border-b border-border pb-4 max-w-[1560px]">
                   <p class="text-sm text-muted" x-text="readingSummary"></p>
                 </div>
 
