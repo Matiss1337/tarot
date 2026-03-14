@@ -246,20 +246,397 @@
     return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(card.imageFile)}`;
   }
 
-  function spreadPositions(size) {
-    return {
-      1: ["Single card"],
-      3: ["Past", "Present", "Next step"],
-      5: ["Current state", "Pressure", "What helps", "What changes", "Likely outcome"],
-    }[size];
+  function spreadPositions(size, language = "en") {
+    const labels = {
+      en: {
+        1: ["Single card"],
+        3: ["Past", "Present", "Next step"],
+        5: ["Current state", "Pressure", "What helps", "What changes", "Likely outcome"],
+      },
+      lv: {
+        1: ["Viena kārts"],
+        3: ["Pagātne", "Tagadne", "Nākamais solis"],
+        5: ["Pašreizējais stāvoklis", "Spiediens", "Kas palīdz", "Kas mainās", "Iespējamais iznākums"],
+      },
+      ru: {
+        1: ["Одна карта"],
+        3: ["Прошлое", "Настоящее", "Следующий шаг"],
+        5: ["Текущее состояние", "Давление", "Что помогает", "Что меняется", "Вероятный итог"],
+      },
+    };
+
+    return labels[language]?.[size] ?? labels.en[size];
   }
 
-  function getMeaning(card, reversed) {
+  const localizedMajorMeanings = {
+    lv: {
+      "The Fool": {
+        upright: "Jauns sākums, zinātkāre un kustība, vēl pirms viss ceļš ir skaidri redzams.",
+        reversed: "Impulsivitāte, izvairāms risks vai vilcināšanās, kas aiztur jaunu posmu.",
+      },
+      "The Magician": {
+        upright: "Prasme, fokuss un spēja pārvērst nodomu kaut ko taustāmu.",
+        reversed: "Izkliedēta enerģija, vājš izpildījums vai ietekmes izmantošana virspusēji.",
+      },
+      "The High Priestess": {
+        upright: "Intuīcija, atturība un informācija, kas svarīgāka kļūst tad, kad to novēro, nevis spiež.",
+        reversed: "Bloķēta intuīcija, jaukti signāli vai izvairīšanās no tā, ko jau jūti kā patiesu.",
+      },
+      "The Empress": {
+        upright: "Izaugsme, rūpes un apstākļi, kas palīdz kaut kam stabilam kļūt bagātīgam.",
+        reversed: "Pāraprūpe, nolaidība vai atbalsta trūkums tam, kas jākopj.",
+      },
+      "The Emperor": {
+        upright: "Struktūra, autoritāte un vajadzība pēc skaidriem noteikumiem vai atbildības.",
+        reversed: "Stīvums, kontroles problēmas vai vāja vadība, kas rada nestabilitāti.",
+      },
+      "The Hierophant": {
+        upright: "Tradīcija, uzticams padoms un vērtība pārbaudītās metodēs.",
+        reversed: "Scenārija apšaubīšana, novecojušu noteikumu noraidīšana vai pakļaušanās bez pārliecības.",
+      },
+      "The Lovers": {
+        upright: "Saskaņa, kopīgas vērtības un izvēle, kurai jāsakrīt ar svarīgāko.",
+        reversed: "Nesaskaņa, saspringtas saites vai izvēles pret savām vērtībām.",
+      },
+      "The Chariot": {
+        upright: "Virziens, disciplīna un progress, kas iegūts ar savaldītu piepūli.",
+        reversed: "Kontroles zudums, konfliktējošas prioritātes vai virzīšanās bez saķeres.",
+      },
+      Strength: {
+        upright: "Pacietība, drosme un ietekme, kas balstīta mierā, nevis spēkā.",
+        reversed: "Paššaubas, nepacietība vai reakcija no stresa, nevis stabilitātes.",
+      },
+      "The Hermit": {
+        upright: "Pārdomas, vientulība un atkāpšanās, lai ieraudzītu skaidrāk.",
+        reversed: "Izolācija, pārdomāšanās vai pārlieka noslēgšanās ilgāk nekā vajadzīgs.",
+      },
+      "Wheel of Fortune": {
+        upright: "Pārmaiņas kustībā, laiks un notikumi, kas mainās ātrāk nekā gaidīts.",
+        reversed: "Pretošanās pārmaiņām, slikts laiks vai viena un tā paša cikla atkārtošana.",
+      },
+      Justice: {
+        upright: "Atbildība, taisnīgums un vajadzība skaidri saskatīt faktus.",
+        reversed: "Aizspriedumi, izvairīšanās vai sekas no neskaidra sprieduma.",
+      },
+      "The Hanged Man": {
+        upright: "Pauze, pieņemšana un labāka atbilde, kas rodas no perspektīvas maiņas.",
+        reversed: "Iestrēgums, mocekļa loma vai atteikšanās no pauzes, kas dotu skaidrību.",
+      },
+      Death: {
+        upright: "Noslēgums, kas atbrīvo vietu nākamajam posmam.",
+        reversed: "Noslēguma vilkšana garumā, turēšanās pie jau pabeigtā vai bailes no pārmaiņām.",
+      },
+      Temperance: {
+        upright: "Līdzsvars, mērenība un vienmērīga dažādu vajadzību savienošana.",
+        reversed: "Pārmērība, slikts temps vai daļas, kas vēl nestrādā kopā.",
+      },
+      "The Devil": {
+        upright: "Pieķeršanās, ieradums vai vēlme, kam ir pārāk liela vara.",
+        reversed: "Raksta pārraušana, slazda saskatīšana vai neveselīgu saišu atslābināšana.",
+      },
+      "The Tower": {
+        upright: "Satricinājums, skarba patiesība un vāju struktūru sabrukums.",
+        reversed: "Lēns sabrukums, pretošanās acīmredzamajam vai mēģinājums aizturēt vajadzīgas pārmaiņas.",
+      },
+      "The Star": {
+        upright: "Cerība, atjaunošanās un mierīgāka virziena sajūta pēc spriedzes.",
+        reversed: "Zems gars, šaubas vai atkopšanās, kurai vajag vairāk laika un uzticības.",
+      },
+      "The Moon": {
+        upright: "Neskaidrība, instinkts un apstākļi, kuros vēl ne viss ir redzams.",
+        reversed: "Apjukuma mazināšanās, atmaskotas ilūzijas vai baiļu vājināšanās.",
+      },
+      "The Sun": {
+        upright: "Skaidrība, siltums un pārliecība, kas rodas no tieša redzējuma.",
+        reversed: "Daļēji panākumi, aizkavēts prieks vai skaidrība, kas vēl netiek pilnībā izmantota.",
+      },
+      Judgement: {
+        upright: "Izšķirošs brīdis, atjaunošanās un rīcība, balstīta uz to, ko jau zini droši.",
+        reversed: "Aicinājuma ignorēšana, skarba paškritika vai vajadzīgā lēmuma atlikšana.",
+      },
+      "The World": {
+        upright: "Noslēgums, integrācija un sajūta, ka pilns cikls ir piezemējies.",
+        reversed: "Nenoslēgtas lietas, aizkavēts noslēgums vai progress, kam vajag pēdējo soli.",
+      },
+    },
+    ru: {
+      "The Fool": {
+        upright: "Новый старт, любопытство и движение еще до того, как весь путь стал понятен.",
+        reversed: "Импульсивность, лишний риск или колебание, которое задерживает новый этап.",
+      },
+      "The Magician": {
+        upright: "Навык, фокус и способность превратить намерение во что-то конкретное.",
+        reversed: "Распыленная энергия, слабое исполнение или поверхностное использование влияния.",
+      },
+      "The High Priestess": {
+        upright: "Интуиция, сдержанность и информация, которая важнее, когда ее наблюдают, а не форсируют.",
+        reversed: "Заблокированная интуиция, смешанные сигналы или избегание того, что уже ощущается как правда.",
+      },
+      "The Empress": {
+        upright: "Рост, забота и условия, в которых что-то устойчивое может стать изобильным.",
+        reversed: "Чрезмерная опека, запущенность или нехватка поддержки тому, что требует заботы.",
+      },
+      "The Emperor": {
+        upright: "Структура, авторитет и необходимость ясных правил или ответственности.",
+        reversed: "Жесткость, проблемы с контролем или слабое лидерство, создающее нестабильность.",
+      },
+      "The Hierophant": {
+        upright: "Традиция, надежное наставничество и ценность проверенных методов.",
+        reversed: "Сомнение в готовом сценарии, отказ от устаревших правил или конформизм без убежденности.",
+      },
+      "The Lovers": {
+        upright: "Согласованность, общие ценности и выбор, который должен совпадать с самым важным.",
+        reversed: "Несовпадение, напряженные связи или выбор против собственных ценностей.",
+      },
+      "The Chariot": {
+        upright: "Направление, дисциплина и прогресс, достигнутый через собранное усилие.",
+        reversed: "Потеря контроля, конфликтующие приоритеты или движение вперед без сцепления.",
+      },
+      Strength: {
+        upright: "Терпение, смелость и влияние, построенное на спокойствии, а не на силе.",
+        reversed: "Неуверенность в себе, нетерпение или реакция из стресса вместо устойчивости.",
+      },
+      "The Hermit": {
+        upright: "Размышление, уединение и шаг назад, чтобы увидеть яснее.",
+        reversed: "Изоляция, чрезмерные раздумья или затянувшаяся отстраненность.",
+      },
+      "Wheel of Fortune": {
+        upright: "Перемены в движении, время и события, которые разворачиваются быстрее ожидаемого.",
+        reversed: "Сопротивление переменам, неудачный момент или повторение одного и того же цикла.",
+      },
+      Justice: {
+        upright: "Ответственность, справедливость и необходимость честно взглянуть на факты.",
+        reversed: "Предвзятость, избегание или последствия неясного суждения.",
+      },
+      "The Hanged Man": {
+        upright: "Пауза, принятие и лучший ответ, который приходит через смену взгляда.",
+        reversed: "Зависание, роль жертвы или отказ от паузы, которая дала бы ясность.",
+      },
+      Death: {
+        upright: "Завершение, освобождающее место для следующего этапа.",
+        reversed: "Затягивание конца, цепляние за уже завершенное или страх перемен.",
+      },
+      Temperance: {
+        upright: "Баланс, умеренность и ровное соединение разных потребностей.",
+        reversed: "Избыток, плохой темп или части, которые пока не работают вместе.",
+      },
+      "The Devil": {
+        upright: "Привязанность, привычка или желание, получившие слишком много власти.",
+        reversed: "Разрыв паттерна, ясное видение ловушки или ослабление нездоровых связей.",
+      },
+      "The Tower": {
+        upright: "Потрясение, жесткая правда и разрушение слабых структур.",
+        reversed: "Медленный распад, сопротивление очевидному или попытка удержать неизбежные перемены.",
+      },
+      "The Star": {
+        upright: "Надежда, восстановление и более спокойное чувство направления после напряжения.",
+        reversed: "Упадок духа, сомнение или восстановление, которому нужно больше времени и доверия.",
+      },
+      "The Moon": {
+        upright: "Неясность, инстинкт и обстоятельства, в которых еще не все видно.",
+        reversed: "Начинающее рассеиваться замешательство, разоблаченные иллюзии или ослабление страха.",
+      },
+      "The Sun": {
+        upright: "Ясность, тепло и уверенность, приходящие от прямого видения вещей.",
+        reversed: "Частичный успех, отложенная радость или ясность, которая пока недоиспользована.",
+      },
+      Judgement: {
+        upright: "Пробуждение, обновление и действие на основе того, что уже ясно известно.",
+        reversed: "Игнорирование зова, жесткая самокритика или откладывание нужного решения.",
+      },
+      "The World": {
+        upright: "Завершение, целостность и ощущение, что полный цикл завершился.",
+        reversed: "Незакрытые вопросы, задержка завершения или прогресс, которому нужен последний шаг.",
+      },
+    },
+  };
+  const minorMeaningTranslations = {
+    lv: {
+      Ace: { upright: "Ir pieejams jauns atvērums vai tīrs sākumpunkts.", reversed: "Atvērums pastāv, bet to aiztur vilcināšanās vai neveiksmīgs laiks." },
+      Two: { upright: "Izvēlei vai līdzsvarošanai vajadzīga stingra roka.", reversed: "Līdzsvars ir izjaukts, un neizlēmība to pasliktina." },
+      Three: { upright: "Izaugsme parādās caur sadarbību vai agrīnu redzamu progresu.", reversed: "Progress ir nevienmērīgs vai apkārtējais atbalsts nestrādā labi." },
+      Four: { upright: "Stabilitāte nāk no struktūras, pauzes vai jau strādājošā aizsargāšanas.", reversed: "Struktūra ir pārāk stīva vai pārāk vāja, lai noturētu." },
+      Five: { upright: "Berze atsedz spriedzes punktu, ko vairs nevar ignorēt.", reversed: "Konflikts mazinās, bet saknes problēmai joprojām vajag tiešu atbildi." },
+      Six: { upright: "Iespējama virzība uz līdzsvaru, atbalstu vai taisnīgāku apmaiņu.", reversed: "Atkopšanās ir daļēja, un zem virsmas joprojām redzams disbalanss." },
+      Seven: { upright: "Šī ir izvērtēšanas, aizsardzības vai virzīšanās cauri pretestībai kārts.", reversed: "Aizsardzības pozīcija, nogurums vai šaubas padara noturēšanos grūtāku." },
+      Eight: { upright: "Notikumus uz priekšu dzen ātrums, atkārtojums vai spēcīgs fokuss.", reversed: "Lietas ķeras, apstājas vai kļūst atkārtotas bez progresa." },
+      Nine: { upright: "Tu esi tuvu beigām, bet spriedze ir reāla.", reversed: "Spriedze ieplūst bailēs, izvairīšanās vai pārreakcijā." },
+      Ten: { upright: "Suitas svars sasniedz pilnu apjomu - gan labā, gan sliktā nozīmē.", reversed: "Svars kļūst neizturams, un kaut kas jāatlaiž." },
+      Page: { upright: "Parādās vēsts, mācība vai agrīnas stadijas iespēja.", reversed: "Signāls ir nenobriedis, neskaidrs vai viegli pārprotams." },
+      Knight: { upright: "Kustība nāk caur vajāšanu, steigu un tiešu rīcību.", reversed: "Kustība ir neapdomīga, iestrēgusi vai vērsta nepareizā virzienā." },
+      Queen: { upright: "Nobriedusi kontrole nāk no mierpilnas pārliecības un pieredzējuša sprieduma.", reversed: "Kontrole pārvēršas noslēgtībā, attālumā vai pārmērīgā aizsardzībā." },
+      King: { upright: "Rezultātu veido vadība, standarti un izlēmīga atbildība.", reversed: "Autoritāte kļūst stīva, trūkstoša vai kalpo tikai sev." },
+    },
+    ru: {
+      Ace: { upright: "Открывается новая возможность или чистая точка старта.", reversed: "Возможность есть, но ее сдерживают колебание или неудачный момент." },
+      Two: { upright: "Выбору или балансировке нужна твердая рука.", reversed: "Баланс нарушен, а нерешительность лишь ухудшает ситуацию." },
+      Three: { upright: "Рост проявляется через сотрудничество или ранний заметный прогресс.", reversed: "Прогресс неравномерен, или поддержка вокруг работает плохо." },
+      Four: { upright: "Стабильность приходит через структуру, паузу или защиту того, что уже работает.", reversed: "Структура слишком жесткая или слишком слабая, чтобы удерживать." },
+      Five: { upright: "Трение показывает точку напряжения, которую уже нельзя игнорировать.", reversed: "Конфликт ослабевает, но корневая проблема все еще требует прямого ответа." },
+      Six: { upright: "Возможен сдвиг к балансу, поддержке или более честному обмену.", reversed: "Восстановление частичное, и дисбаланс все еще виден под поверхностью." },
+      Seven: { upright: "Это карта оценки, защиты или продвижения сквозь сопротивление.", reversed: "Оборонительность, усталость или сомнение затрудняют удержание позиции." },
+      Eight: { upright: "События ускоряются благодаря скорости, повторению или сильной концентрации.", reversed: "Все цепляется, тормозит или повторяется без настоящего прогресса." },
+      Nine: { upright: "Вы уже близко к концу, но давление реально.", reversed: "Напряжение переходит в страх, избегание или чрезмерную реакцию." },
+      Ten: { upright: "Масть доходит до полного веса - как в хорошем, так и в тяжелом смысле.", reversed: "Груз становится неустойчивым, и что-то нужно отпустить." },
+      Page: { upright: "Входит сообщение, урок или возможность ранней стадии.", reversed: "Сигнал незрелый, неясный или его легко неверно прочитать." },
+      Knight: { upright: "Движение приходит через преследование, срочность и прямое действие.", reversed: "Движение безрассудно, застопорилось или направлено не туда." },
+      Queen: { upright: "Зрелый контроль приходит через спокойную уверенность и опытное суждение.", reversed: "Контроль превращается в отстраненность, холодность или чрезмерную опеку." },
+      King: { upright: "Исход формируют лидерство, стандарты и решительная ответственность.", reversed: "Авторитет становится жестким, отсутствующим или эгоистичным." },
+    },
+  };
+  const minorSuitTopics = {
+    lv: {
+      Wands: "iniciatīvas, ambīciju, impulsa un radošā dzinuļa jomā",
+      Cups: "emociju, tuvības, intuīcijas un atmiņu jomā",
+      Swords: "domu, valodas, spriedzes un konflikta jomā",
+      Pentacles: "darba, naudas, veselības un praktiskās stabilitātes jomā",
+    },
+    ru: {
+      Wands: "в сфере инициативы, амбиций, импульса и творческого драйва",
+      Cups: "в сфере эмоций, близости, интуиции и памяти",
+      Swords: "в сфере мысли, языка, давления и конфликта",
+      Pentacles: "в сфере работы, денег, здоровья и практической стабильности",
+    },
+  };
+  const minorDirectionTranslations = {
+    lv: {
+      upright: "Enerģija ir tieša, pieejama un vieglāk īstenojama.",
+      reversed: "Enerģija vēršas uz iekšu, kavējas vai izpaužas sagrozīti.",
+    },
+    ru: {
+      upright: "Энергия прямая, доступная и ей легче дать ход.",
+      reversed: "Энергия обращена внутрь, задерживается или искажается.",
+    },
+  };
+  const applicationTranslations = {
+    lv: {
+      major: {
+        upright: "Uztver šo kā galveno mācību vai pagrieziena punktu šajā lasījumā.",
+        reversed: "Uztver šo kā zīmi piebremzēt un sakārtot to, kas ir šķībi.",
+      },
+      suits: {
+        Wands: {
+          upright: "Atbalsti spēcīgāko ideju un virzi to ar skaidru piepūli, negaidot pilnīgu pārliecību.",
+          reversed: "Nogriež troksni, izvēlies vienu virzienu un beidz dedzināt enerģiju izklaidus sākumos.",
+        },
+        Cups: {
+          upright: "Uzticies attiecību tonim un reaģē godīgi, nevis ar pārmērīgu kontroli.",
+          reversed: "Nosauc sajūtu tieši, pirms tā sāk ietekmēt lēmumus apkārtceļos.",
+        },
+        Swords: {
+          upright: "Lieto tiešu valodu, skaidru domāšanu un ļauj faktiem darīt savu darbu.",
+          reversed: "Pārbaudi pieņēmumus, noņem pārspīlējumus un nestrīdies ar savu projekciju.",
+        },
+        Pentacles: {
+          upright: "Izvēlies vienmērīgu izpildi, praktiskas rūpes un darbu, kas krājas laika gaitā.",
+          reversed: "Sakārto rutīnu, budžetu vai procesu, pirms dzenies pēc lielāka rezultāta.",
+        },
+      },
+    },
+    ru: {
+      major: {
+        upright: "Считай это главным уроком или поворотным моментом данного расклада.",
+        reversed: "Воспринимай это как знак замедлиться и привести в порядок то, что пошло криво.",
+      },
+      suits: {
+        Wands: {
+          upright: "Поддержи самую сильную идею и двигай ее ясным усилием, не дожидаясь полной уверенности.",
+          reversed: "Срежь шум, выбери одно направление и перестань тратить силы на рассеянные старты.",
+        },
+        Cups: {
+          upright: "Доверься тону связи и отвечай честно, а не через чрезмерный контроль.",
+          reversed: "Назови чувство прямо, прежде чем оно начнет влиять на решения обходным путем.",
+        },
+        Swords: {
+          upright: "Используй прямую речь, ясное мышление и позволь фактам сделать свою работу.",
+          reversed: "Проверь предположения, убери преувеличения и не спорь со своей проекцией.",
+        },
+        Pentacles: {
+          upright: "Выбирай ровное исполнение, практическую заботу и работу, которая накапливает эффект.",
+          reversed: "Подтяни рутину, бюджет или процесс, прежде чем гнаться за большим результатом.",
+        },
+      },
+    },
+  };
+  const keywordTranslations = {
+    lv: {
+      start: "sākums", risk: "risks", trust: "uzticība", hesitation: "vilcināšanās", openness: "atvērtība",
+      skill: "prasme", intent: "nodoms", focus: "fokuss", misuse: "ļaunprātība", execution: "izpilde",
+      intuition: "intuīcija", restraint: "atturība", signal: "signāls", block: "bloks", knowing: "zināšana",
+      growth: "izaugsme", care: "rūpes", support: "atbalsts", neglect: "nolaidība", abundance: "pārpilnība",
+      order: "kārtība", authority: "autoritāte", structure: "struktūra", rigidity: "stīvums", control: "kontrole",
+      tradition: "tradīcija", teaching: "mācība", method: "metode", rebellion: "dumpīgums", guidance: "vadība",
+      values: "vērtības", union: "savienība", choice: "izvēle", misalignment: "nesaskaņa", alignment: "saskaņa",
+      direction: "virziens", discipline: "disciplīna", drive: "dzinulis", drift: "novirze", progress: "progress",
+      courage: "drosme", patience: "pacietība", composure: "savaldība", doubt: "šaubas", influence: "ietekme",
+      solitude: "vientulība", reflection: "pārdomas", clarity: "skaidrība", withdrawal: "norobežošanās", search: "meklējums",
+      change: "pārmaiņas", timing: "laiks", cycle: "cikls", resistance: "pretestība", shift: "maiņa",
+      truth: "patiesība", fairness: "taisnīgums", consequence: "sekas", bias: "aizspriedums", balance: "līdzsvars",
+      pause: "pauze", perspective: "perspektīva", release: "atlaišana", stall: "iestrēgums", surrender: "pieņemšana",
+      ending: "noslēgums", transition: "pāreja", clinging: "pieķeršanās", renewal: "atjaunošanās",
+      pace: "temps", integration: "integrācija", excess: "pārmērība", moderation: "mērenība",
+      attachment: "pieķeršanās", habit: "ieradums", desire: "vēlme", bondage: "saistība",
+      shock: "satricinājums", collapse: "sabrukums", avoidance: "izvairīšanās", disruption: "izjaukums",
+      hope: "cerība", repair: "atjaunošana", uncertainty: "neskaidrība", instinct: "instinkts", fog: "migla", exposure: "atsegšana", mystery: "noslēpums",
+      joy: "prieks", confidence: "pārliecība", delay: "kavēšanās", success: "veiksme",
+      reckoning: "spriedums", call: "aicinājums", decision: "lēmums", completion: "pabeigšana", closure: "noslēgums", arrival: "nonākšana",
+      opening: "atvērums", potential: "potenciāls", spark: "dzirksts", exchange: "apmaiņa", results: "rezultāti",
+      consolidation: "nostiprināšana", friction: "berze", stress: "spriedze", test: "pārbaudījums",
+      adjustment: "pielāgošanās", movement: "kustība", defense: "aizsardzība", strain: "spriedze",
+      effort: "piepūle", resilience: "izturība", pressure: "spiediens", threshold: "slieksnis",
+      culmination: "kulminācija", load: "slodze", "full weight": "pilns svars", message: "vēsts", study: "mācīšanās",
+      curiosity: "zinātkāre", pursuit: "vajāšana", action: "rīcība", mastery: "meistarība", responsibility: "atbildība",
+      active: "aktīvs", blocked: "bloķēts", motion: "kustība", emotion: "emocija", bond: "saikne", work: "darbs", resources: "resursi", stability: "stabilitāte",
+    },
+    ru: {
+      start: "начало", risk: "риск", trust: "доверие", hesitation: "колебание", openness: "открытость",
+      skill: "навык", intent: "намерение", focus: "фокус", misuse: "злоупотребление", execution: "исполнение",
+      intuition: "интуиция", restraint: "сдержанность", signal: "сигнал", block: "блок", knowing: "знание",
+      growth: "рост", care: "забота", support: "поддержка", neglect: "запущенность", abundance: "изобилие",
+      order: "порядок", authority: "авторитет", structure: "структура", rigidity: "жесткость", control: "контроль",
+      tradition: "традиция", teaching: "обучение", method: "метод", rebellion: "бунт", guidance: "наставление",
+      values: "ценности", union: "союз", choice: "выбор", misalignment: "несовпадение", alignment: "согласованность",
+      direction: "направление", discipline: "дисциплина", drive: "импульс", drift: "дрейф", progress: "прогресс",
+      courage: "смелость", patience: "терпение", composure: "самообладание", doubt: "сомнение", influence: "влияние",
+      solitude: "уединение", reflection: "размышление", clarity: "ясность", withdrawal: "отстранение", search: "поиск",
+      change: "перемена", timing: "время", cycle: "цикл", resistance: "сопротивление", shift: "сдвиг",
+      truth: "правда", fairness: "справедливость", consequence: "последствие", bias: "предвзятость", balance: "баланс",
+      pause: "пауза", perspective: "перспектива", release: "отпускание", stall: "застой", surrender: "принятие",
+      ending: "завершение", transition: "переход", clinging: "цепляние", renewal: "обновление",
+      pace: "темп", integration: "интеграция", excess: "избыток", moderation: "умеренность",
+      attachment: "привязанность", habit: "привычка", desire: "желание", bondage: "зависимость",
+      shock: "шок", collapse: "обрушение", avoidance: "избегание", disruption: "разрушение",
+      hope: "надежда", repair: "восстановление", uncertainty: "неясность", instinct: "инстинкт", fog: "туман", exposure: "разоблачение", mystery: "тайна",
+      joy: "радость", confidence: "уверенность", delay: "задержка", success: "успех",
+      reckoning: "пробуждение", call: "зов", decision: "решение", completion: "завершенность", closure: "закрытие", arrival: "прибытие",
+      opening: "открытие", potential: "потенциал", spark: "искра", exchange: "обмен", results: "результаты",
+      consolidation: "укрепление", friction: "трение", stress: "напряжение", test: "испытание",
+      adjustment: "настройка", movement: "движение", defense: "защита", strain: "напряжение",
+      effort: "усилие", resilience: "стойкость", pressure: "давление", threshold: "порог",
+      culmination: "кульминация", load: "нагрузка", "full weight": "полный вес", message: "сообщение", study: "изучение",
+      curiosity: "любопытство", pursuit: "преследование", action: "действие", mastery: "мастерство", responsibility: "ответственность",
+      active: "активно", blocked: "заблокировано", motion: "движение", emotion: "эмоция", bond: "связь", work: "работа", resources: "ресурсы", stability: "стабильность",
+    },
+  };
+
+  function getMeaning(card, reversed, language = "en") {
     if (card.arcana === "Major Arcana") {
+      if (language !== "en") {
+        return localizedMajorMeanings[language]?.[card.name]?.[reversed ? "reversed" : "upright"] ??
+          (reversed ? card.reversed : card.upright);
+      }
+
       return reversed ? card.reversed : card.upright;
     }
 
-    const rankText = minorRankMeaning(card.rank, reversed);
+    const rankText = minorRankMeaning(card.rank, reversed, language);
+
+    if (language === "lv" || language === "ru") {
+      const topic = minorSuitTopics[language][card.suit];
+      const direction = minorDirectionTranslations[language][reversed ? "reversed" : "upright"];
+      return `${rankText} ${topic}. ${direction}`;
+    }
+
     const direction = reversed
       ? "The energy is turned inward, delayed, or distorted."
       : "The energy is direct, available, and easier to act on.";
@@ -267,7 +644,15 @@
     return `${rankText} In ${card.topic}, ${direction}`;
   }
 
-  function getApplication(card, reversed) {
+  function getApplication(card, reversed, language = "en") {
+    if (language !== "en") {
+      if (card.arcana === "Major Arcana") {
+        return applicationTranslations[language].major[reversed ? "reversed" : "upright"];
+      }
+
+      return applicationTranslations[language].suits[card.suit][reversed ? "reversed" : "upright"];
+    }
+
     if (card.arcana === "Major Arcana") {
       return reversed
         ? "Treat this as a sign to slow down and clean up what is off."
@@ -292,9 +677,9 @@
     return suitGuidance[card.suit];
   }
 
-  function getKeywords(card, reversed) {
+  function getKeywords(card, reversed, language = "en") {
     if (card.arcana === "Major Arcana") {
-      return majorKeywords(card.name, reversed);
+      return localizeKeywords(majorKeywords(card.name, reversed), language);
     }
 
     const suitKeywords = {
@@ -322,10 +707,17 @@
     };
 
     const reversalKeyword = reversed ? ["blocked"] : ["active"];
-    return [...rankKeywords[card.rank], ...suitKeywords[card.suit], ...reversalKeyword].slice(0, 4);
+    return localizeKeywords(
+      [...rankKeywords[card.rank], ...suitKeywords[card.suit], ...reversalKeyword].slice(0, 4),
+      language
+    );
   }
 
-  function minorRankMeaning(rank, reversed) {
+  function minorRankMeaning(rank, reversed, language = "en") {
+    if (language !== "en") {
+      return minorMeaningTranslations[language][rank][reversed ? "reversed" : "upright"];
+    }
+
     const meanings = {
       Ace: {
         upright: "A new opening or clean starting point is available.",
@@ -388,6 +780,14 @@
     return reversed ? meanings[rank].reversed : meanings[rank].upright;
   }
 
+  function localizeKeywords(keywords, language) {
+    if (language === "en") {
+      return keywords;
+    }
+
+    return keywords.map((keyword) => keywordTranslations[language]?.[keyword] ?? keyword);
+  }
+
   function majorKeywords(name, reversed) {
     const map = {
       "The Fool": ["start", "risk", "trust", reversed ? "hesitation" : "openness"],
@@ -417,341 +817,6 @@
     return map[name];
   }
 
-  function summarizeReading(cards, question) {
-    if (!cards.length) {
-      return "";
-    }
-
-    resetSummarySeed(
-      cards
-        .map((card) => `${card.name}:${card.reversed ? "r" : "u"}:${card.slotLabel || ""}`)
-        .join("|") + `|${question || ""}`
-    );
-
-    const reversedCount = cards.filter((card) => card.reversed).length;
-    const majorCount = cards.filter((card) => card.arcana === "Major Arcana").length;
-    const suitCounts = cards.reduce((counts, card) => {
-      if (card.suit) {
-        counts[card.suit] = (counts[card.suit] || 0) + 1;
-      }
-      return counts;
-    }, {});
-    const rankCounts = cards.reduce((counts, card) => {
-      if (card.rank) {
-        counts[card.rank] = (counts[card.rank] || 0) + 1;
-      }
-      return counts;
-    }, {});
-
-    const dominantSuit = getDominantEntry(suitCounts);
-    const repeatedRank = getDominantEntry(rankCounts);
-    const patternSummaries = [
-      buildMajorArcanaSummary(majorCount, cards.length),
-      buildSuitSummary(dominantSuit, suitCounts, cards.length),
-      buildReversalSummary(reversedCount, cards.length),
-      buildRepeatedRankSummary(repeatedRank),
-    ].filter(Boolean);
-
-    const selectedPatterns = sampleMany(patternSummaries, Math.min(patternSummaries.length, 2));
-
-    if (cards.length === 5) {
-      const [currentState, pressure, help, change, outcome] = cards;
-
-      return [
-        buildFiveCardOverview(currentState, outcome, question),
-        buildPressureHelpSummary(pressure, help),
-        ...selectedPatterns,
-        buildChangeOutcomeSummary(change, help, outcome),
-      ].join(" ");
-    }
-
-    return [
-      buildGeneralOverview(cards, question),
-      ...selectedPatterns,
-      buildGeneralAdvice(cards[cards.length - 1]),
-    ].join(" ");
-  }
-
-  function dominantSuitSummary(suit) {
-    return {
-      Wands: "action, timing, and momentum",
-      Cups: "emotion, connection, and instinct",
-      Swords: "clarity, conflict, and hard decisions",
-      Pentacles: "practical work, money, and stability",
-    }[suit];
-  }
-
-  function getDominantEntry(counts) {
-    const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-
-    if (!entries.length) {
-      return null;
-    }
-
-    if (entries.length > 1 && entries[0][1] === entries[1][1]) {
-      return null;
-    }
-
-    return entries[0];
-  }
-
-  function buildFiveCardOverview(currentState, outcome, question) {
-    const lead = question
-      ? sample([
-          `For "${question},"`,
-          `On "${question},"`,
-          `Around "${question},"`,
-        ])
-      : sample([
-          "This five-card spread opens with",
-          "The reading begins with",
-          "The first movement in this spread is",
-        ]);
-
-    const stateKeyword = currentState.keywords?.[0] || "the present tone";
-    const outcomeKeyword = outcome.keywords?.[0] || "the likely result";
-
-    return sample([
-      `${lead} ${currentState.name} in ${currentState.slotLabel.toLowerCase()} and leans toward ${outcome.name} in ${outcome.slotLabel.toLowerCase()}, so the story moves from ${stateKeyword} toward ${outcomeKeyword}.`,
-      `${lead} ${currentState.name} names the situation now, while ${outcome.name} shows where the line of events is trying to land.`,
-      `${lead} the spread starts in ${currentState.name} and resolves through ${outcome.name}, which frames the whole reading as a move from ${stateKeyword} toward ${outcomeKeyword}.`,
-    ]);
-  }
-
-  function buildPressureHelpSummary(pressure, help) {
-    if (pressure.arcana === "Major Arcana" || help.arcana === "Major Arcana") {
-      return sample([
-        `${pressure.name} describes the pressure, but ${help.name} suggests the answer is less a quick tactic and more a shift in perspective or timing.`,
-        `What presses here is ${pressure.name}; what helps is ${help.name}, which makes the solution feel like a lesson to embody rather than a small fix.`,
-      ]);
-    }
-
-    const relation = elementalRelationship(pressure.suit, help.suit);
-
-    if (relation === "same") {
-      return sample([
-        `${pressure.name} and ${help.name} come from the same suit, so the remedy lives in the exact area where the strain is happening.`,
-        `${help.name} answers ${pressure.name} on its own turf, which usually means the pressure can be handled directly rather than sidestepped.`,
-      ]);
-    }
-
-    if (relation === "friendly") {
-      return sample([
-        `${pressure.name} meets ${help.name} through compatible elements, so the support in this spread is real if you use it consistently.`,
-        `${help.name} strengthens ${pressure.name} rather than cancelling it out, which suggests the pressure is workable with the right follow-through.`,
-      ]);
-    }
-
-    if (relation === "hostile") {
-      return sample([
-        `${pressure.name} and ${help.name} clash elementally, so the way through is not more of the same; it needs a different mode entirely.`,
-        `${help.name} does not solve ${pressure.name} by force. It redirects it, which is usually a sign that the current approach is mismatched to the problem.`,
-      ]);
-    }
-
-    return sample([
-      `${pressure.name} and ${help.name} do not fully reinforce each other, which makes this a reading about balance rather than a single obvious answer.`,
-      `${help.name} sits beside ${pressure.name} without cancelling it, so progress depends on pacing and adjustment more than a clean breakthrough.`,
-    ]);
-  }
-
-  function buildMajorArcanaSummary(majorCount, total) {
-    if (majorCount === 0) {
-      return sample([
-        "The spread is all Minor Arcana, which usually means this is still in the realm of choices, habits, and day-to-day handling rather than fate.",
-        "With no Major Arcana present, the reading feels practical: important, but still shaped heavily by what you choose next.",
-      ]);
-    }
-
-    if (majorCount >= Math.ceil(total / 2)) {
-      return sample([
-        `With ${majorCount} Major Arcana in the spread, this reads more like a genuine turning point than a passing mood.`,
-        `${majorCount} Major Arcana push this beyond routine noise. The reading is pointing at a larger lesson or threshold.`,
-      ]);
-    }
-
-    return sample([
-      `The ${majorCount} Major Arcana card${majorCount > 1 ? "s" : ""} here act like pressure points, so a few moments in the spread carry more weight than the rest.`,
-      `${majorCount} Major Arcana card${majorCount > 1 ? "s" : ""} suggest that part of this is ordinary life, but part of it has real consequence and cannot be brushed off.`,
-    ]);
-  }
-
-  function buildSuitSummary(dominantSuit, suitCounts, total) {
-    if (dominantSuit) {
-      const [suit, count] = dominantSuit;
-
-      if (count >= Math.ceil(total / 2)) {
-        return sample([
-          `${suit} dominate the spread, so the reading is strongly about ${dominantSuitSummary(suit)}.`,
-          `There is a clear ${suit} emphasis, which makes ${dominantSuitSummary(suit)} the main language of the reading.`,
-        ]);
-      }
-
-      return sample([
-        `${suit} appear most often, so they quietly set the tone toward ${dominantSuitSummary(suit)}.`,
-        `${suit} are the strongest suit here, which pulls the spread toward ${dominantSuitSummary(suit)} even when other themes show up.`,
-      ]);
-    }
-
-    const suitTypes = Object.keys(suitCounts).length;
-
-    if (suitTypes >= 3) {
-      return sample([
-        "No single suit takes over, so the issue is split across action, emotion, thought, and practical reality at the same time.",
-        "The suits are mixed enough that this does not reduce to one theme; several layers of life are moving together here.",
-      ]);
-    }
-
-    return "";
-  }
-
-  function buildReversalSummary(reversedCount, total) {
-    if (reversedCount === 0) {
-      return sample([
-        "Everything is upright, which usually means the message is visible and the path to action is relatively direct.",
-        "With no reversals, the spread reads openly. The issue may be difficult, but it is not especially hidden.",
-      ]);
-    }
-
-    if (reversedCount >= Math.ceil(total / 2)) {
-      return sample([
-        `With ${reversedCount} reversals, the reading is heavy on delay, internal conflict, or energy that is turning inward before it can move outward.`,
-        `${reversedCount} reversed cards make this feel less blocked by circumstance than tangled by resistance, timing, or mixed signals.`,
-      ]);
-    }
-
-    return sample([
-      `There are ${reversedCount} reversals in the spread, which adds friction without overwhelming the whole message.`,
-      `${reversedCount} reversed card${reversedCount > 1 ? "s" : ""} suggest some drag in the system, but not enough to erase the forward movement.`,
-    ]);
-  }
-
-  function buildRepeatedRankSummary(repeatedRank) {
-    if (!repeatedRank || repeatedRank[1] < 2) {
-      return "";
-    }
-
-    const [rank, count] = repeatedRank;
-
-    return sample([
-      `The repeated ${rank} energy matters here. Seeing it ${count} times puts extra emphasis on ${rankPhaseSummary(rank)}.`,
-      `${count} ${rank} cards echo each other across the spread, which usually means the reading is circling the theme of ${rankPhaseSummary(rank)}.`,
-    ]);
-  }
-
-  function buildChangeOutcomeSummary(change, help, outcome) {
-    if (outcome.reversed) {
-      return sample([
-        `The cleanest advice sits in ${help.name}: ${help.application} If that is ignored, ${outcome.name} is more likely to show up as delay or drag than a clean result.`,
-        `${change.name} marks the hinge point in the spread. ${help.application} That is what reduces the risk of ${outcome.name} arriving in its harder form.`,
-      ]);
-    }
-
-    return sample([
-      `${change.name} shows where the turn happens. The most usable guidance is in ${help.name}: ${help.application}`,
-      `The route forward runs through ${change.name}, but the practical lever is still ${help.name}: ${help.application}`,
-    ]);
-  }
-
-  function buildGeneralOverview(cards, question) {
-    const firstCard = cards[0];
-    const lastCard = cards[cards.length - 1];
-    const lead = question
-      ? sample([`For "${question},"`, `On "${question},"`])
-      : sample(["This spread shows", "The reading points to", "The cards suggest"]);
-
-    return sample([
-      `${lead} a movement from ${firstCard.name} toward ${lastCard.name}, so the message develops rather than staying fixed in one mood.`,
-      `${lead} ${firstCard.name} as the opening note and ${lastCard.name} as the later emphasis, which gives the reading a clear arc.`,
-    ]);
-  }
-
-  function buildGeneralAdvice(card) {
-    return sample([
-      `The clearest takeaway is simple: ${card.application}`,
-      `If you want one usable instruction from the spread, start here: ${card.application}`,
-    ]);
-  }
-
-  function elementalRelationship(firstSuit, secondSuit) {
-    if (!firstSuit || !secondSuit) {
-      return "neutral";
-    }
-
-    if (firstSuit === secondSuit) {
-      return "same";
-    }
-
-    const pair = [firstSuit, secondSuit].sort().join("|");
-
-    if (pair === "Swords|Wands" || pair === "Cups|Pentacles") {
-      return "friendly";
-    }
-
-    if (pair === "Cups|Wands" || pair === "Pentacles|Swords") {
-      return "hostile";
-    }
-
-    return "neutral";
-  }
-
-  function rankPhaseSummary(rank) {
-    return {
-      Ace: "openings and first signals",
-      Two: "choice and balancing",
-      Three: "growth and early results",
-      Four: "structure and consolidation",
-      Five: "friction and testing",
-      Six: "adjustment and rebalancing",
-      Seven: "evaluation and resistance",
-      Eight: "speed and sustained motion",
-      Nine: "pressure near the threshold",
-      Ten: "culmination and full weight",
-      Page: "messages and early learning",
-      Knight: "movement and pursuit",
-      Queen: "mature control and steady care",
-      King: "authority and final responsibility",
-    }[rank];
-  }
-
-  let summarySeed = 1;
-
-  function resetSummarySeed(signature) {
-    summarySeed = hashString(signature);
-  }
-
-  function hashString(value) {
-    let hash = 2166136261;
-
-    for (let index = 0; index < value.length; index += 1) {
-      hash ^= value.charCodeAt(index);
-      hash = Math.imul(hash, 16777619);
-    }
-
-    return (hash >>> 0) || 1;
-  }
-
-  function nextSummarySeed() {
-    summarySeed = (Math.imul(summarySeed, 1664525) + 1013904223) >>> 0;
-    return summarySeed;
-  }
-
-  function sample(list) {
-    return list[nextSummarySeed() % list.length];
-  }
-
-  function sampleMany(list, count) {
-    const pool = [...list];
-    const picked = [];
-
-    while (pool.length && picked.length < count) {
-      const index = nextSummarySeed() % pool.length;
-      picked.push(pool.splice(index, 1)[0]);
-    }
-
-    return picked;
-  }
-
   window.TarotDeck = {
     buildDeck,
     getApplication,
@@ -759,6 +824,5 @@
     getKeywords,
     getMeaning,
     spreadPositions,
-    summarizeReading,
   };
 })();
