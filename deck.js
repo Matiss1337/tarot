@@ -1,5 +1,5 @@
-(function () {
-  const majorArcana = [
+const majorArcana = [
+  
     {
       name: "The Fool",
       arcana: "Major Arcana",
@@ -817,12 +817,11 @@
     return map[name];
   }
 
-  window.TarotDeck = {
-    buildDeck,
-    getApplication,
-    getImageUrl,
-    getKeywords,
-    getMeaning,
-    spreadPositions,
-  };
-})();
+export {
+  buildDeck,
+  getApplication,
+  getImageUrl,
+  getKeywords,
+  getMeaning,
+  spreadPositions,
+};
